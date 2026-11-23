@@ -196,6 +196,10 @@ FONT = {
     "-": (".....", ".....", ".....", ".###.", ".....", ".....", "....."),
     "'": (".....", "..#..", "..#..", ".....", ".....", ".....", "....."),
     "%": ("##..#", "##.#.", "...#.", "..#..", ".#...", "#.##.", "#..##"),
+    "&": (".###.", "#...#", "#.#..", ".##..", "#.#.#", "#..#.", ".##.#"),
+    "+": (".....", "..#..", "..#..", "#####", "..#..", "..#..", "....."),
+    ";": (".....", ".....", "..#..", ".....", ".....", ".##..", ".#..."),
+    "$": ("..#..", ".####", "#.#..", ".###.", "..#.#", "..#.#", "####."),
 }
 
 GW = 5   # glyph cell width in font units
@@ -266,6 +270,9 @@ def draw_globe(cv, cx, cy, r, line_c, land_c):
     cv.hline(cx - r, cy, 2 * r + 1, line_c, 2)
     cv.disc(cx - r // 2, cy - r // 3, max(2, r // 4), land_c)
     cv.disc(cx + r // 3, cy + r // 3, max(2, r // 5), land_c)
+    cv.disc(cx + r // 4, cy - r // 2, max(2, r // 6), land_c)
+    for dx in (-r * 3 // 5, -r // 5, r * 2 // 5):
+        cv.disc(cx + dx, cy, 2, land_c)
 
 
 def draw_thermometer(cv, x, y, w, h):
@@ -299,12 +306,6 @@ def draw_waves(cv, x, y, w, c, t=3):
 
 def draw_ship(cv, x, y, w, h):
     """Ship on waves with a red burst above it."""
-    # red burst (star) above the ship
-    bx, by = x + w // 2, y + 8
-    for dx, dy in ((0, -10), (0, 10), (-10, 0), (10, 0),
-                   (-7, -7), (7, -7), (-7, 7), (7, 7)):
-        cv.line(bx, by, bx + dx, by + dy, RED, 3)
-    cv.disc(bx, by, 5, RED)
     # hull
     hy = y + h - 26
     cv.fill_rect(x + 14, hy, w - 28, 14, INK)
@@ -314,7 +315,18 @@ def draw_ship(cv, x, y, w, h):
     cv.vline(mx, hy - 26, 26, INK, 3)
     cv.fill_rect(mx + 3, hy - 26, 26, 22, TEAL)
     cv.fill_rect(mx - 22, hy - 20, 19, 16, BLUE)
-    draw_waves(cv, x, y + h - 8, w, TEAL)
+    # small red pennant flag flying left from the mast top
+    cv.fill_rect(mx - 8, hy - 26, 5, 3, RED)
+    cv.fill_rect(mx - 14, hy - 23, 11, 3, RED)
+    cv.fill_rect(mx - 8, hy - 20, 5, 3, RED)
+    # red burst (star) to the left of the mast, drawn last so it stays
+    # visible instead of being covered by the sails
+    bx, by = x + 45, y + 10
+    for dx, dy in ((0, -8), (0, 8), (-8, 0), (8, 0),
+                   (-6, -6), (6, -6), (-6, 6), (6, 6)):
+        cv.line(bx, by, bx + dx, by + dy, RED, 3)
+    cv.disc(bx, by, 4, RED)
+    draw_waves(cv, x, y + h - 14, w, TEAL)
 
 
 def draw_tanker(cv, x, y, w, h):
@@ -324,13 +336,17 @@ def draw_tanker(cv, x, y, w, h):
     cv.disc(fx, fy, 10, GOLD)
     cv.disc(fx, fy + 4, 6, RED)
     cv.fill_rect(fx - 3, fy - 16, 6, 10, GOLD)
+    # wisp of smoke above the flame
+    cv.disc(fx + 8, fy - 14, 3, GREY)
+    cv.disc(fx + 12, fy - 20, 2, GREY)
     # hull and deck
     hy = y + h - 26
     cv.fill_rect(x + 10, hy, w - 20, 14, INK)
     cv.fill_rect(x + w - 34, hy - 16, 22, 16, INK)
     cv.fill_rect(x + 22, hy - 10, 12, 10, GOLD)
     cv.fill_rect(x + 40, hy - 10, 12, 10, GOLD)
-    draw_waves(cv, x, y + h - 8, w, TEAL)
+    cv.fill_rect(x + 58, hy - 10, 12, 10, GOLD)
+    draw_waves(cv, x, y + h - 14, w, TEAL)
 
 
 def draw_badge(cv, cx, cy, r):
@@ -339,12 +355,18 @@ def draw_badge(cv, cx, cy, r):
     cv.ring(cx, cy, r, INK, 2)
     cv.ring(cx, cy, r - 6, INK, 2)
     # five-point star, drawn as short spokes from the centre
-    sr = r // 2
+    sr = r * 2 // 5
     for dx, dy in ((0, -sr), (0, sr), (-sr, 0), (sr, 0),
                    (-sr * 2 // 3, -sr * 2 // 3), (sr * 2 // 3, -sr * 2 // 3),
                    (-sr * 2 // 3, sr * 2 // 3), (sr * 2 // 3, sr * 2 // 3)):
         cv.line(cx, cy, cx + dx, cy + dy, INK, 2)
     cv.disc(cx, cy, 4, INK)
+    # second, smaller star below the main one
+    sy = cy + r // 2 + 4
+    for dx, dy in ((0, -3), (0, 3), (-3, 0), (3, 0),
+                   (-2, -2), (2, -2), (-2, 2), (2, 2)):
+        cv.line(cx, sy, cx + dx, sy + dy, INK, 2)
+    cv.disc(cx, sy, 2, INK)
 
 
 def draw_arrows(cv, x, y, w):
@@ -359,36 +381,62 @@ def draw_arrows(cv, x, y, w):
         for i in range(9):
             cv.fill_rect(tx + i * 2, ty - 12 + (8 - i), 2, 24 - 2 * (8 - i), c)
 
-    ay = y + 14
+    ay = y + 10
     cv.fill_rect(x + 8, ay - 4, w - 34, 8, TEAL)
     tri_right(x + w - 26, ay, TEAL)
-    by = y + 38
+    by = y + 28
     cv.fill_rect(x + 26, by - 4, w - 34, 8, GOLD)
     tri_left(x + 8, by, GOLD)
-    cv.fill_rect(x + 8, y + 48, w - 16, 5, TEAL)
+    # small gold bar above the teal bar
+    cv.fill_rect(x + 8, y + 36, w - 16, 4, GOLD)
+    cv.fill_rect(x + 8, y + 42, w - 16, 5, TEAL)
 
 
 def draw_house(cv, x, y, w, h):
     """Small house: red roof, ink walls and door, gold star above."""
+    cx = x + w // 2
     # gold star above the house
-    sx, sy = x + w // 2, y + 6
-    for dx, dy in ((0, -6), (0, 6), (-6, 0), (6, 0),
-                   (-4, -4), (4, -4), (-4, 4), (4, 4)):
+    sx, sy = cx, y + 4
+    for dx, dy in ((0, -4), (0, 4), (-4, 0), (4, 0),
+                   (-3, -3), (3, -3), (-3, 3), (3, 3)):
         cv.line(sx, sy, sx + dx, sy + dy, GOLD, 2)
-    cv.disc(sx, sy, 3, GOLD)
+    cv.disc(sx, sy, 2, GOLD)
+    # chimney to the right of the roof peak
+    cv.fill_rect(cx + 16, y + 10, 6, 10, INK)
     # walls
-    wx = x + w // 2 - 26
-    wy = y + 24
-    cv.fill_rect(wx, wy, 52, 30, WHITE)
-    cv.rect(wx, wy, 52, 30, INK, 2)
+    wy = y + 22
+    cv.fill_rect(cx - 26, wy, 52, 24, WHITE)
+    cv.rect(cx - 26, wy, 52, 24, INK, 2)
     # pitched red roof: rows widening from the peak down to the eaves
     for i in range(7):
-        cv.fill_rect(x + w // 2 - 4 - i * 5, wy - 14 + i * 2, 8 + i * 10, 3, RED)
-    cv.fill_rect(wx - 8, wy - 2, 68, 4, RED)
+        cv.fill_rect(cx - 4 - i * 5, wy - 12 + i * 2, 8 + i * 10, 3, RED)
+    cv.fill_rect(cx - 34, wy - 2, 68, 4, RED)
+    # two small gold windows
+    cv.fill_rect(cx - 20, wy + 6, 8, 8, GOLD)
+    cv.fill_rect(cx + 12, wy + 6, 8, 8, GOLD)
+    cv.rect(cx - 20, wy + 6, 8, 8, INK, 1)
+    cv.rect(cx + 12, wy + 6, 8, 8, INK, 1)
     # door
-    cv.fill_rect(x + w // 2 - 7, wy + 12, 14, 18, INK)
+    cv.fill_rect(cx - 7, wy + 8, 14, 16, INK)
     # ground
-    cv.hline(x + 8, wy + 30, w - 16, INK, 2)
+    cv.hline(x + 8, wy + 24, w - 16, INK, 2)
+
+
+def draw_courthouse(cv, x, y, w, h):
+    """Courthouse/jail front: triangular roof, three columns, gold door."""
+    cx = x + w // 2
+    # triangular roof: rows widening from the peak down to the eaves
+    for i in range(7):
+        cv.fill_rect(cx - 6 - i * 10, y + 4 + i * 2, 12 + i * 20, 3, INK)
+    cv.fill_rect(cx - 76, y + 18, 152, 3, INK)
+    # three vertical columns
+    for col_x in (cx - 62, cx - 6, cx + 50):
+        cv.fill_rect(col_x, y + 21, 12, 21, INK)
+    # small gold door between the middle and right columns
+    cv.fill_rect(cx + 12, y + 30, 16, 12, GOLD)
+    cv.rect(cx + 12, y + 30, 16, 12, INK, 1)
+    # base platform
+    cv.fill_rect(cx - 76, y + 42, 152, 4, INK)
 
 # --------------------------------------------------------------------- page
 MARGIN = 16
@@ -411,29 +459,29 @@ def draw_masthead(cv):
 
 
 def draw_lead(cv):
-    y0, y1 = 152, 436
+    y0, y1 = 152, 372
     cv.fill_rect(LEFT, y0, PAGE_W, y1 - y0, WHITE)
     cv.rect(LEFT, y0, PAGE_W, y1 - y0, INK, 2)
     cv.fill_rect(LEFT, y0, 12, y1 - y0, RED)
     tx = LEFT + 32
-    draw_text(cv, tx, y0 + 30, "CLIMATE - COP31, ANTALYA", 3, RED, bold=True)
-    draw_text(cv, tx, y0 + 66, "COP31 COLLAPSES", 7, INK, bold=True)
+    draw_text(cv, tx, y0 + 24, "CLIMATE - COP31, ANTALYA", 3, RED, bold=True)
+    draw_text(cv, tx, y0 + 58, "COP31 COLLAPSES", 7, INK, bold=True)
     summary = ("UN climate talks in Antalya collapse after more than two "
                "weeks, the longest COP in history and the first failure "
                "since 2009.")
-    lines = wrap_text(summary, 2, 760)
-    yy = y0 + 142
+    lines = wrap_text(summary, 2, 760, spacing=1)
+    yy = y0 + 118
     for ln in lines:
-        draw_text(cv, tx, yy, ln, 2, INK)
+        draw_text(cv, tx, yy, ln, 2, INK, spacing=1)
         yy += 20
     # thin grey rule, then grey foot line
-    ry = y0 + 142 + len(lines) * 20 + 12
+    ry = yy + 12
     cv.hline(tx, ry, 760, LIGHT_GREY, 2)
     draw_text(cv, tx, ry + 14, "LONGEST COP IN HISTORY - FIRST FAILURE SINCE 2009",
               2, GREY, bold=True)
     # motifs at the right side
-    draw_globe(cv, RIGHT - 140, y0 + 88, 44, INK, TEAL)
-    draw_thermometer(cv, RIGHT - 84, y0 + 40, 56, 150)
+    draw_globe(cv, RIGHT - 140, y0 + 78, 44, INK, TEAL)
+    draw_thermometer(cv, RIGHT - 84, y0 + 26, 56, 150)
 
 
 CARDS = [
@@ -452,17 +500,75 @@ CARDS = [
     ("WAR IN UKRAINE", "BOY, 7, PULLED ALIVE",
      "A drone strike on a home in Dimer kills nine. Rescuers save a boy, "
      "7, and a woman, 79, from the rubble.", INK, "house"),
+    ("POLITICS", "MAMDANI TO CLOSE RIKERS",
+     "New York's mayor unveils a plan to shut the Rikers Island jail "
+     "complex.", RED, "courthouse"),
 ]
 
 BRIEFS = [
-    "NATO meets in Brussels after missiles hit Poland",
-    "Democrats win largest House majority since 1992",
-    "UK set to host 2035 Women's World Cup",
-    "6.5 quake in Vanuatu region, 598 km deep",
-    "Jeweller Paolo Bulgari dies, aged 89",
-    "Lagarde to leave ECB in February 2027",
-    "French students plan nationwide protests",
+    "NATO meets after missiles hit Poland",
+    "Democrats win big House majority",
+    "UK to host 2035 Women's World Cup",
+    "6.5 quake in Vanuatu, 598 km deep",
+    "Jeweller Paolo Bulgari dies at 89",
+    "Lagarde to leave ECB in Feb 2027",
+    "French students plan protests",
+    "IG Metall calls 23,000 to walk out",
+    "Bolsonaro in hospital, son says",
+    "Congo rivals agree to restore ties",
+    "Gold rebounds above $3,600",
+    "Virginia's first measles death",
 ]
+
+
+def tri_down(cv, x, y, c):
+    """Small filled triangle pointing down, 9 wide, 10 tall."""
+    for i in range(5):
+        cv.fill_rect(x + i, y + i * 2, 9 - 2 * i, 2, c)
+
+
+def tri_up(cv, x, y, c):
+    """Small filled triangle pointing up, 9 wide, 10 tall."""
+    for i in range(5):
+        cv.fill_rect(x + i, y + (4 - i) * 2, 9 - 2 * i, 2, c)
+
+
+MARKETS = [
+    ("S&P 500", "6,910", "-3.7%", False),
+    ("NASDAQ", "22,618", "-5.3%", False),
+    ("DOW", "48,147", "-1.9%", False),
+    ("NIKKEI", "56,437", "-5.1%", False),
+    ("KOSPI", "4,587", "-5.8%", False),
+    ("FTSE", "10,412", "+0.6%", True),
+]
+
+
+def draw_markets_strip(cv, x, y, w, h):
+    """Narrow markets band: red MARKETS label, then six index entries.
+
+    Each entry stacks its bold name above its value plus a small
+    triangle and the coloured change, so every entry fits its slot.
+    """
+    cv.fill_rect(x, y, w, h, WHITE)
+    cv.rect(x, y, w, h, INK, 2)
+    lw = 112
+    cv.fill_rect(x, y, lw, h, RED)
+    draw_text(cv, x + lw // 2, y + (h - 14) // 2, "MARKETS", 2, WHITE,
+              bold=True, align="center")
+    ex = x + lw + 8
+    slot = (x + w - ex - 8) // 6
+    for i, (name, value, change, up) in enumerate(MARKETS):
+        sx = ex + i * slot
+        draw_text(cv, sx, y + 5, name, 2, INK, bold=True, spacing=1)
+        draw_text(cv, sx, y + 23, value, 2, INK, spacing=1)
+        vw = text_width(value, 2, spacing=1)
+        tx = sx + vw + 5
+        col = TEAL if up else RED
+        if up:
+            tri_up(cv, tx, y + 25, col)
+        else:
+            tri_down(cv, tx, y + 25, col)
+        draw_text(cv, tx + 12, y + 23, change, 2, col, spacing=1)
 
 
 def draw_motif(cv, kind, x, y, w, h):
@@ -476,41 +582,47 @@ def draw_motif(cv, kind, x, y, w, h):
         draw_arrows(cv, x, y, w)
     elif kind == "house":
         draw_house(cv, x, y, w, h)
+    elif kind == "courthouse":
+        draw_courthouse(cv, x, y, w, h)
 
 
 def draw_story_card(cv, x, y, w, h, kicker, headline, summary, strip, kind):
     cv.fill_rect(x, y, w, h, WHITE)
     cv.rect(x, y, w, h, INK, 2)
-    cv.fill_rect(x, y, w, 30, strip)
-    draw_text(cv, x + 12, y + 8, kicker, 2, WHITE, bold=True)
-    mx, my, mw, mh = x + 12, y + 36, w - 24, 50
+    cv.fill_rect(x, y, w, 28, strip)
+    draw_text(cv, x + 12, y + 7, kicker, 2, WHITE, bold=True)
+    mx, my, mw, mh = x + 12, y + 32, w - 24, 48
     draw_motif(cv, kind, mx, my, mw, mh)
-    lines = wrap_text(headline, 3, w - 24, bold=True)
-    yy = y + 92
+    lines = wrap_text(headline, 3, w - 24, bold=True, spacing=2)
+    yy = y + 84
     for ln in lines:
-        draw_text(cv, x + 12, yy, ln, 3, INK, bold=True)
+        draw_text(cv, x + 12, yy, ln, 3, INK, bold=True, spacing=2)
+        # Headline leading: glyph height at scale 3 is 7*3 = 21 px, so
+        # the line step must be larger than 21 or two-line headlines
+        # touch and read as one merged band. Step 23 gives 2 px of
+        # leading between the lines and 2 px before the summary at y+130.
         yy += 23
     slines = wrap_text(summary, 2, w - 24)
-    yy += 6
+    yy = y + 130
     for ln in slines:
         draw_text(cv, x + 12, yy, ln, 2, INK)
-        yy += 15
+        yy += 14
 
 
-def draw_briefs_card(cv, x, y, w, h):
+def draw_briefs_band(cv, x, y, w, h):
+    """Full-width briefs band: grey strip, twelve items in two columns."""
     cv.fill_rect(x, y, w, h, WHITE)
     cv.rect(x, y, w, h, INK, 2)
-    cv.fill_rect(x, y, w, 30, GREY)
-    draw_text(cv, x + 12, y + 8, "ALSO IN BRIEF", 2, WHITE, bold=True)
-    yy = y + 38
-    for item in BRIEFS:
-        lines = wrap_text(item, 2, w - 34, spacing=1)
-        for j, ln in enumerate(lines):
-            if j == 0:
-                cv.fill_rect(x + 12, yy + 4, 8, 8, RED)
-            draw_text(cv, x + 26, yy, ln, 2, INK, spacing=1)
-            yy += 15
-        yy += 2
+    cv.fill_rect(x, y, w, 26, GREY)
+    draw_text(cv, x + 12, y + 6, "ALSO IN BRIEF", 2, WHITE, bold=True)
+    col_w = (w - 12) // 2
+    for col in range(2):
+        cx0 = x + 12 + col * col_w
+        for row in range(6):
+            item = BRIEFS[col * 6 + row]
+            yy = y + 32 + row * 14
+            cv.fill_rect(cx0, yy + 3, 8, 8, RED)
+            draw_text(cv, cx0 + 14, yy, item, 2, INK, spacing=1)
 
 
 def build_page():
@@ -518,23 +630,22 @@ def build_page():
     cv.rect(8, 8, W - 16, H - 16, INK, 3)
     draw_masthead(cv)
     draw_lead(cv)
-    # six cards: two rows of three; bottom row taller so the briefs fit
-    gap = 13
+    draw_markets_strip(cv, LEFT, 380, PAGE_W, 44)
+    # six cards: two rows of three
+    gap = 12
     cw = (PAGE_W - 2 * gap) // 3
-    ch_top = 252
-    ch_bot = 264
-    y_top = 448
-    y_bot = y_top + ch_top + 12
-    positions = [(LEFT + i * (cw + gap), y_top) for i in range(3)]
-    positions += [(LEFT + i * (cw + gap), y_bot) for i in range(3)]
-    heights = [ch_top, ch_top, ch_top, ch_bot, ch_bot, ch_bot]
+    ch = 204
+    step = (PAGE_W - cw) // 2
+    y_top = 432
+    y_bot = y_top + ch + 10
+    positions = [(LEFT + i * step, y_top) for i in range(3)]
+    positions += [(LEFT + i * step, y_bot) for i in range(3)]
     for i, (kicker, headline, summary, strip, kind) in enumerate(CARDS):
         x, y = positions[i]
-        draw_story_card(cv, x, y, cw, heights[i], kicker, headline, summary,
+        draw_story_card(cv, x, y, cw, ch, kicker, headline, summary,
                         strip, kind)
-    x, y = positions[5]
-    draw_briefs_card(cv, x, y, cw, ch_bot)
-    draw_text(cv, W // 2, 988, "REPORTED ON MONDAY 23 NOVEMBER 2026", 2,
+    draw_briefs_band(cv, LEFT, 858, PAGE_W, 120)
+    draw_text(cv, W // 2, 986, "REPORTED ON MONDAY 23 NOVEMBER 2026", 2,
               GREY, align="center")
     return cv
 
